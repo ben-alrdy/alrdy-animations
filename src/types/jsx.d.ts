@@ -472,8 +472,10 @@ declare namespace JSX {
     'aa-scroll-offset'?: string | number
 
     /**
-     * Marker for slider containers. Value carries optional flags:
-     * `draggable` | `center` | `snap` | `loop` (space-separated).
+     * Marker for slider containers. Value carries optional flags (space-separated):
+     * `draggable` | `center` | `finite` | `none`. The carousel loops infinitely
+     * by default; `finite` makes it a bounded, non-looping track (nav clamps at
+     * the ends, drag is bounded, autoplay rewinds to the first slide).
      * Feature: `slider`. Plugins: `Draggable`, `InertiaPlugin`. Pair with
      * `aa-slider-item` on each slide, optional `aa-slider-prev` / `aa-slider-next`
      * buttons, and `aa-autoplay` for auto-advance.

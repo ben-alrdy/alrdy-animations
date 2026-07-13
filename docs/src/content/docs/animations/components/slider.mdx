@@ -16,6 +16,7 @@ import Demo from '../../../../components/Demo.astro'
 | (empty)           | Basic slider; prev/next + thumb buttons advance one slide. No autoplay, no drag.                      |
 | `draggable`       | Mouse + touch drag with InertiaPlugin throw, snaps to nearest slide.                                  |
 | `center`          | Centers the active slide horizontally in the container.                                               |
+| `finite`          | Non-looping track with hard start/end bounds. Prev/next and keyboard clamp at the first/last slide (arrow buttons get `.is-disabled` + `aria-disabled` there); drag is bounded; autoplay rewinds to the first slide at the end. Combines with `center` and `draggable`. |
 | `none`            | Don't init at this breakpoint. Combine with the `\|` shorthand (splits at `md`) or any of the `-sm` / `-md` / `-lg` / `-xl` suffix attributes for responsive on/off. |
 
 Autoplay is configured separately via the standalone `aa-autoplay` attribute — see [Config attributes](#config-attributes).
@@ -106,6 +107,113 @@ When the slider has focus, **Arrow Left** / **Arrow Right** step backwards / for
         <button aa-slider-prev>Prev</button>
         <span><span aa-slider-current>01</span>/<span aa-slider-total>05</span></span>
         <button aa-slider-next>Next</button>
+      </div>
+    </div>
+    <div data-spacer></div>
+  </div>
+</Demo>
+
+## Live demo — finite (non-looping)
+
+`aa-slider="finite"` bounds the track: prev is disabled on the first slide, next on the last, and neither wraps. The `.is-disabled` class + `aria-disabled` let you style the end state.
+
+<Demo caption={{ "aa-slider": "finite" }}>
+  <div data-demo-stage>
+    <div data-spacer></div>
+    <div id="aa-slider-finite-basic" class="aa-slider-demo" aa-slider="finite">
+      <div class="aa-slider-track">
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 1</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 2</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 3</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 4</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 5</div></div>
+      </div>
+      <div class="aa-slider-controls">
+        <button aa-slider-prev>Prev</button>
+        <span><span aa-slider-current>01</span>/<span aa-slider-total>05</span></span>
+        <button aa-slider-next>Next</button>
+      </div>
+    </div>
+    <div data-spacer></div>
+  </div>
+</Demo>
+
+## Live demo — finite, centered, draggable
+
+`aa-slider="finite center draggable"` shows multiple slides with the active one centered, draggable within the start/end bounds — no wrap. Drag past either end and it rubber-bands back.
+
+<Demo caption={{ "aa-slider": "finite center draggable", "aa-duration": "0.6" }}>
+  <div data-demo-stage>
+    <div data-spacer></div>
+    <div id="aa-slider-finite-center" class="aa-slider-demo aa-slider-demo-wide" aa-slider="finite center draggable" aa-duration="0.6">
+      <div class="aa-slider-track">
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide A</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide B</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide C</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide D</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide E</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide F</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide G</div></div>
+      </div>
+      <div class="aa-slider-controls">
+        <button aa-slider-prev>Prev</button>
+        <span><span aa-slider-current>01</span>/<span aa-slider-total>07</span></span>
+        <button aa-slider-next>Next</button>
+      </div>
+    </div>
+    <div data-spacer></div>
+  </div>
+</Demo>
+
+## Live demo — finite, multiple slides visible
+
+A non-centered `aa-slider="finite draggable"` showing several slides at once. Paging (and dragging) stops when the last slide's right edge reaches the viewport — it never scrolls into empty space past the end.
+
+<Demo caption={{ "aa-slider": "finite draggable", "aa-duration": "0.5" }}>
+  <div data-demo-stage>
+    <div data-spacer></div>
+    <div id="aa-slider-finite-multi" class="aa-slider-demo" aa-slider="finite draggable" aa-duration="0.5">
+      <div class="aa-slider-track">
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 1</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 2</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 3</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 4</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 5</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 6</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 7</div></div>
+        <div class="aa-slider-card aa-slider-card-narrow" aa-slider-item><div class="aa-slider-card__inner">Slide 8</div></div>
+      </div>
+      <div class="aa-slider-controls">
+        <button aa-slider-prev>Prev</button>
+        <span><span aa-slider-current>01</span>/<span aa-slider-total>08</span></span>
+        <button aa-slider-next>Next</button>
+      </div>
+    </div>
+    <div data-spacer></div>
+  </div>
+</Demo>
+
+## Live demo — finite, autoplay with pagination buttons
+
+`aa-slider="finite"` with `aa-autoplay="2 hover-pause"` auto-advances every 2s and **rewinds to the first slide** once it reaches the last (finite never wraps, so autoplay loops by rewinding). Each `[aa-slider-button]` is a pagination dot that highlights the active slide (`.is-active` + `aria-current`) and holds a `[aa-slider-progress]` fill for the dwell. Hover to pause.
+
+<Demo caption={[{ label: "root", attrs: { "aa-slider": "finite", "aa-autoplay": "2 hover-pause" } }, { label: "thumb", attrs: { "aa-slider-progress": "width", "aa-ease": "none" } }]}>
+  <div data-demo-stage>
+    <div data-spacer></div>
+    <div id="aa-slider-finite-autoplay" class="aa-slider-demo" aa-slider="finite" aa-autoplay="2 hover-pause">
+      <div class="aa-slider-track">
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 1</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 2</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 3</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 4</div></div>
+        <div class="aa-slider-card" aa-slider-item><div class="aa-slider-card__inner">Slide 5</div></div>
+      </div>
+      <div class="aa-slider-thumbs">
+        <button aa-slider-button aria-label="Slide 1"><span class="aa-slider-progress" aa-slider-progress="width" aa-ease="none"></span></button>
+        <button aa-slider-button aria-label="Slide 2"><span class="aa-slider-progress" aa-slider-progress="width" aa-ease="none"></span></button>
+        <button aa-slider-button aria-label="Slide 3"><span class="aa-slider-progress" aa-slider-progress="width" aa-ease="none"></span></button>
+        <button aa-slider-button aria-label="Slide 4"><span class="aa-slider-progress" aa-slider-progress="width" aa-ease="none"></span></button>
+        <button aa-slider-button aria-label="Slide 5"><span class="aa-slider-progress" aa-slider-progress="width" aa-ease="none"></span></button>
       </div>
     </div>
     <div data-spacer></div>
@@ -308,6 +416,10 @@ Each slide contains a heading and paragraph with plain `aa-animate="fade-up"` �
     cursor: pointer;
     font: inherit;
   }
+  .aa-slider-controls button.is-disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
   .aa-slider-thumbs {
     display: flex;
     gap: 0.5rem;
@@ -329,6 +441,10 @@ Each slide contains a heading and paragraph with plain `aa-animate="fade-up"` �
     display: block;
     width: 0%;
     height: 100%;
+    background: var(--sl-color-accent);
+  }
+  /* Active pagination dot stays highlighted between/without autoplay ticks. */
+  .aa-slider-thumbs button.is-active {
     background: var(--sl-color-accent);
   }
   /* Circular thumbs: a small filled dot + an SVG ring that draws around it. */

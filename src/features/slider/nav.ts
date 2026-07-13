@@ -20,7 +20,12 @@ export interface NavClickHandlers {
   current: () => number
 }
 
-export function setupNav(root: HTMLElement): NavSetupResult {
+export interface NavOptions {
+  /** Finite (non-looping) slider: disable prev/next at the first/last slide. */
+  finite?: boolean
+}
+
+export function setupNav(root: HTMLElement, opts: NavOptions = {}): NavSetupResult {
   const items = Array.from(root.querySelectorAll<HTMLElement>('[aa-slider-item]'))
   if (items.length === 0) {
     return {
@@ -127,6 +132,22 @@ export function setupNav(root: HTMLElement): NavSetupResult {
 
     if (currentEl) {
       currentEl.textContent = formatIndex(index + 1)
+    }
+
+    // Finite slider: reflect the hard bounds on the arrow buttons so authors
+    // can style the disabled state. The handlers still fire but the engine
+    // clamps, so this is purely an affordance.
+    if (opts.finite) {
+      if (prevButton) {
+        const disabled = index === 0
+        prevButton.classList.toggle('is-disabled', disabled)
+        prevButton.setAttribute('aria-disabled', String(disabled))
+      }
+      if (nextButton) {
+        const disabled = index === total - 1
+        nextButton.classList.toggle('is-disabled', disabled)
+        nextButton.setAttribute('aria-disabled', String(disabled))
+      }
     }
   }
 

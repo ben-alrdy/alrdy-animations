@@ -110,6 +110,78 @@ test.describe('slider demo page', () => {
     expect(widthPct).toBeLessThan(95)
   })
 
+  test('finite slider clamps at the start: prev is disabled and does not wrap', async ({ page }) => {
+    const initLog = page.waitForEvent('console', { predicate: initialized, timeout: 8000 })
+    await page.goto('/animations/components/slider/')
+    await initLog
+    await page.waitForTimeout(300)
+
+    const finite = page.locator('#aa-slider-finite-basic')
+    const prev = finite.locator('[aa-slider-prev]')
+    const current = finite.locator('[aa-slider-current]')
+
+    // On the first slide prev is disabled (both the class and ARIA).
+    expect(await current.textContent()).toBe('01')
+    expect(await prev.getAttribute('class')).toMatch(/is-disabled/)
+    expect(await prev.getAttribute('aria-disabled')).toBe('true')
+
+    // Clicking prev at the start is a no-op — no wrap to the last slide.
+    // force:true bypasses Playwright's actionability check (it won't click an
+    // aria-disabled element), which lets us prove the handler no-ops.
+    await prev.click({ force: true })
+    await page.waitForTimeout(700)
+    expect(await current.textContent()).toBe('01')
+  })
+
+  test('finite slider clamps at the end: next is disabled and does not wrap', async ({ page }) => {
+    const initLog = page.waitForEvent('console', { predicate: initialized, timeout: 8000 })
+    await page.goto('/animations/components/slider/')
+    await initLog
+    await page.waitForTimeout(300)
+
+    const finite = page.locator('#aa-slider-finite-basic')
+    const next = finite.locator('[aa-slider-next]')
+    const current = finite.locator('[aa-slider-total]')
+
+    await finite.focus()
+    await finite.press('End')
+    await page.waitForTimeout(700)
+    expect(await finite.locator('[aa-slider-current]').textContent()).toBe('05')
+
+    // At the last slide next is disabled and clicking it does not wrap to 01.
+    expect(await next.getAttribute('class')).toMatch(/is-disabled/)
+    expect(await next.getAttribute('aria-disabled')).toBe('true')
+    await next.click({ force: true })
+    await page.waitForTimeout(700)
+    expect(await finite.locator('[aa-slider-current]').textContent()).toBe('05')
+    // Total is unchanged (sanity that we're on the right slider).
+    expect(await current.textContent()).toBe('05')
+  })
+
+  test('finite multi-up slider does not overscroll past the last slide', async ({ page }) => {
+    const initLog = page.waitForEvent('console', { predicate: initialized, timeout: 8000 })
+    await page.goto('/animations/components/slider/')
+    await initLog
+    await page.waitForTimeout(300)
+
+    const multi = page.locator('#aa-slider-finite-multi')
+    await multi.scrollIntoViewIfNeeded()
+    await multi.focus()
+    await multi.press('End')
+    await page.waitForTimeout(700)
+
+    // At the end, the last slide's right edge must line up with the track's
+    // right edge (no blank space past it). Pre-fix, left-aligning the last
+    // slide would leave its right edge well inside the viewport.
+    const gap = await multi.evaluate((root) => {
+      const items = root.querySelectorAll('[aa-slider-item]')
+      const track = items[0].parentElement as HTMLElement
+      const last = items[items.length - 1] as HTMLElement
+      return last.getBoundingClientRect().right - track.getBoundingClientRect().right
+    })
+    expect(Math.abs(gap)).toBeLessThan(2)
+  })
+
   test('inside-slide animation plays on slide-active, reverses on slide-inactive', async ({ page }) => {
     const initLog = page.waitForEvent('console', { predicate: initialized, timeout: 8000 })
     await page.goto('/animations/components/slider/')

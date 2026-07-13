@@ -14,6 +14,12 @@ export interface AutoplayOptions {
   duration: number
   ease: string
   hoverPause: boolean
+  /**
+   * How to advance one slide. Defaults to `slider.next(...)` (infinite wrap).
+   * The finite slider overrides this to rewind to the first slide instead of
+   * no-op'ing at the last.
+   */
+  advance?: () => void
 }
 
 export interface AutoplayController {
@@ -40,6 +46,7 @@ export function setupAutoplay(
 ): AutoplayController {
   const gsap = gsapHandle.gsap as unknown as Record<string, any>
   const { interval, duration, ease, hoverPause } = options
+  const advance = options.advance ?? ((): void => void slider.next({ duration, ease }))
 
   let autoplayCall:
     | { kill: () => void; pause: () => void; resume: () => void; paused: () => boolean }
@@ -59,7 +66,7 @@ export function setupAutoplay(
   const start = (): void => {
     if (autoplayCall) return
     const tick = (): void => {
-      slider.next({ duration, ease })
+      advance()
       gsap.delayedCall(duration / 2, () => {
         syncProgress(slider.current())
       })

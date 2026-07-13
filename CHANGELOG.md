@@ -24,6 +24,14 @@ What v8 doesn't have yet: **Pin** animations (rebuild planned in v8.x), form-sub
 
 ---
 
+## [8.1.2] — 2026-07-13
+
+### Added
+- **`aa-slider="finite"` — a non-looping slider mode.** The carousel still loops infinitely by default; `finite` makes it a bounded track with hard start/end bounds. Prev/next and keyboard **clamp** at the first/last slide (the arrow buttons get `.is-disabled` + `aria-disabled="true"` there so you can style the end state), **drag is bounded** (rubber-bands at the edges, never wraps), and **autoplay rewinds** to the first slide instead of stalling at the last. Combines with `center` and `draggable`. Implemented as a separate engine (`finite-track.ts`) so the infinite `horizontalLoop` path is untouched.
+
+### Fixed
+- **`aa-slider` JSDoc/reference listed `snap` and `loop` tokens that were never implemented.** Corrected to the real flag set: `draggable` / `center` / `finite` / `none`.
+
 ## [8.1.1] — 2026-07-02
 
 ### Fixed

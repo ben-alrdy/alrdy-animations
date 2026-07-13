@@ -4,6 +4,7 @@ import { observeSize } from '../../core/visibility'
 import { bindRootFeature, type FeatureContext, type FeatureModule } from '../../core/registry'
 import type { Config } from '../../core/settings'
 import { setupAutoplay, type AutoplayController } from './autoplay'
+import { finiteTrack } from './finite-track'
 import { horizontalLoop, type SliderLoop } from './horizontal-loop'
 import { attachKeyboard } from './keyboard'
 import { setupNav } from './nav'
@@ -11,6 +12,7 @@ import { setupNav } from './nav'
 interface ParsedTokens {
   isDraggable: boolean
   isCenter: boolean
+  isFinite: boolean
   isNone: boolean
 }
 
@@ -22,6 +24,7 @@ function parseSliderValue(raw: string | undefined): ParsedTokens {
   return {
     isDraggable: tokens.includes('draggable'),
     isCenter: tokens.includes('center'),
+    isFinite: tokens.includes('finite'),
     isNone: tokens.includes('none'),
   }
 }
@@ -48,7 +51,7 @@ function setupOne(ctx: FeatureContext, root: HTMLElement, config: Config): (() =
     ? parseFloat(window.getComputedStyle(firstItemParent).columnGap || '0') || 0
     : 0
 
-  const nav = setupNav(root)
+  const nav = setupNav(root, { finite: tokens.isFinite })
 
   const gsap = ctx.gsap.gsap as unknown as Record<string, any>
 
@@ -93,7 +96,8 @@ function setupOne(ctx: FeatureContext, root: HTMLElement, config: Config): (() =
     }
   }
 
-  const slider: SliderLoop = horizontalLoop(ctx.gsap, items, {
+  const buildSlider = tokens.isFinite ? finiteTrack : horizontalLoop
+  const slider: SliderLoop = buildSlider(ctx.gsap, items, {
     speed: duration,
     repeat: -1,
     paused: true,
@@ -127,11 +131,20 @@ function setupOne(ctx: FeatureContext, root: HTMLElement, config: Config): (() =
 
   // Autoplay (optional). Hooks into ScrollTrigger viewport gating itself.
   if (autoplay.enabled) {
+    // Finite sliders don't wrap, so next() no-ops at the last slide. Rewind to
+    // the first slide there so autoplay keeps cycling.
+    const advance = tokens.isFinite
+      ? (): void => {
+          if (slider.current() >= nav.total - 1) slider.toIndex(0, { duration, ease })
+          else slider.next({ duration, ease })
+        }
+      : undefined
     autoplayCtl = setupAutoplay(ctx.gsap, root, slider, {
       interval: autoplay.interval,
       duration,
       ease,
       hoverPause: autoplay.hoverPause,
+      ...(advance ? { advance } : {}),
     })
     cleanups.push(() => autoplayCtl?.destroy())
   }

@@ -1,4 +1,5 @@
 import type { GsapHandle, GsapTimeline } from '../../core/gsap-detect'
+import { attachTouchScrollGuard } from './touch-guard'
 
 /**
  * Augmented timeline returned by horizontalLoop. Adds index navigation methods,
@@ -302,7 +303,6 @@ export function horizontalLoop(
     let lastSnap = 0
     let initChangeX = 0
     let wasPlaying = false
-    let isDragInitialized = false
     let draggable: DraggableInstance
 
     const align = (): void => {
@@ -355,49 +355,11 @@ export function horizontalLoop(
       },
     })[0]
 
-    // Touch handlers — disable Draggable when the user is scrolling vertically.
-    const trigger = items[0].parentNode as HTMLElement
-    let touchStartY = 0
-    let touchStartX = 0
-    let disabledForScroll = false
-
-    const handleTouchStart = (e: TouchEvent): void => {
-      touchStartY = e.touches[0].clientY
-      touchStartX = e.touches[0].clientX
-    }
-    const handleTouchMove = (e: TouchEvent): void => {
-      if (!isDragInitialized) {
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY)
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartX)
-        if (deltaY > deltaX) {
-          draggable.disable()
-          disabledForScroll = true
-        } else isDragInitialized = true
-      }
-    }
-    const handleTouchEnd = (): void => {
-      if (!isDragInitialized) draggable.enable()
-      // onPressInit already fired onDragStart (which stops autoplay), but
-      // disabling Draggable mid-press strips its pointerup listener so its own
-      // onRelease never fires. Without this, the static-press release path
-      // never runs and autoplay stays stopped after a vertical scroll / tap.
-      // Mirror a static press (isThrowing=false) so the caller restarts.
-      if (disabledForScroll) {
-        disabledForScroll = false
-        config.onRelease?.(false)
-      }
-      isDragInitialized = false
-    }
-
-    trigger.addEventListener('touchstart', handleTouchStart, { passive: true })
-    trigger.addEventListener('touchmove', handleTouchMove, { passive: true })
-    trigger.addEventListener('touchend', handleTouchEnd)
-
-    tl.touchCleanup = (): void => {
-      trigger.removeEventListener('touchstart', handleTouchStart)
-      trigger.removeEventListener('touchmove', handleTouchMove)
-      trigger.removeEventListener('touchend', handleTouchEnd)
-    }
+    tl.touchCleanup = attachTouchScrollGuard(
+      items[0].parentNode as HTMLElement,
+      draggable,
+      () => config.onRelease?.(false),
+    )
 
     tl.draggable = draggable
   }
