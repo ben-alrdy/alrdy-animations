@@ -1,6 +1,6 @@
 {
   "name": "alrdy-animate",
-  "version": "8.1.1",
+  "version": "8.1.2",
   "description": "Attribute-driven scroll-animation and interactive-component library. GSAP is loaded externally as a peer dependency.",
   "type": "module",
   "main": "./dist/alrdy-animate.umd.cjs",
