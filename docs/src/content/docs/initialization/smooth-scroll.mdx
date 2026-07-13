@@ -2,7 +2,7 @@
 title: Smooth scroll
 description: Lenis-driven smooth scroll, enabled by default. Forward any Lenis option, disable entirely, or omit the Lenis script tag to silently skip. The instance is exposed at window.lenis for custom scripts.
 sidebar:
-  order: 5
+  order: 6
 ---
 
 alrdy-animate wires [Lenis](https://github.com/darkroomengineering/lenis) into GSAP for you. When `smoothScroll: true` (the default) and `window.Lenis` is present, the lib creates a Lenis instance, attaches it to `gsap.ticker` with `lagSmoothing(0)`, and bridges `ScrollTrigger.update` to Lenis's `scroll` event — every scroll-driven animation follows the smoothed scroll position automatically.

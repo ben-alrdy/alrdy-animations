@@ -2,7 +2,7 @@
 title: Mobile optimization
 description: The optimizeMobile flag drops the heaviest decorative features (text splits, parallax, standalone aa-split) on viewports below the md breakpoint. Tuned for performance rather than accessibility — appear and component features run unchanged.
 sidebar:
-  order: 4
+  order: 5
 ---
 
 `optimizeMobile` drops the heaviest decorative features on small viewports, tuned for performance rather than accessibility. When the viewport is below `breakpoints.md` (default 768px), `text-*` animations, `parallax`, and the standalone `aa-split` utility never run — their feature modules' `init()` is skipped entirely, so the expensive work (SplitText splitting headings into per-char/word/line spans, parallax scroll-driven transforms) is never executed.

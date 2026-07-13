@@ -1,0 +1,133 @@
+---
+// Override of Starlight's Sidebar: wraps the default sidebar and layers on
+// (1) accordion behaviour — opening one top-level group closes the others —
+// and (2) a smooth height animation for every open/close, instead of the
+// native <details> instant snap. Registered via `components.Sidebar` in
+// astro.config.mjs.
+import Default from '@astrojs/starlight/components/Sidebar.astro'
+---
+
+<Default><slot /></Default>
+
+<script>
+  const DURATION = 260
+  const EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'
+
+  const reduceMotion = () =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // Animates a single <details> open/close via the Web Animations API.
+  // Pattern adapted from the standard "animate the details element" approach:
+  // intercept the summary click, drive height manually, set `open` at the ends.
+  class AnimatedDetails {
+    el: HTMLDetailsElement
+    onOpen: (self: AnimatedDetails) => void
+    summary: HTMLElement
+    content: HTMLElement
+    animation: Animation | null = null
+    isClosing = false
+    isExpanding = false
+
+    constructor(el: HTMLDetailsElement, onOpen: (self: AnimatedDetails) => void) {
+      this.el = el
+      this.onOpen = onOpen
+      this.summary = el.querySelector(':scope > summary') as HTMLElement
+      this.content = el.querySelector(':scope > ul') as HTMLElement
+      this.summary.addEventListener('click', (e) => this.onClick(e))
+    }
+
+    onClick(e: MouseEvent) {
+      e.preventDefault()
+      if (reduceMotion()) {
+        this.el.open = !this.el.open
+        if (this.el.open) this.onOpen(this)
+        return
+      }
+      this.el.style.overflow = 'hidden'
+      if (this.isClosing || !this.el.open) {
+        this.doOpen()
+      } else if (this.isExpanding || this.el.open) {
+        this.shrink()
+      }
+    }
+
+    shrink() {
+      this.isClosing = true
+      const start = `${this.el.offsetHeight}px`
+      const end = `${this.summary.offsetHeight}px`
+      this.run(start, end, false)
+      if (this.animation) this.animation.oncancel = () => (this.isClosing = false)
+    }
+
+    doOpen() {
+      this.el.style.height = `${this.el.offsetHeight}px`
+      this.el.open = true
+      this.onOpen(this)
+      window.requestAnimationFrame(() => this.expand())
+    }
+
+    expand() {
+      this.isExpanding = true
+      const start = `${this.el.offsetHeight}px`
+      const end = `${this.summary.offsetHeight + this.content.offsetHeight}px`
+      this.run(start, end, true)
+      if (this.animation) this.animation.oncancel = () => (this.isExpanding = false)
+    }
+
+    run(start: string, end: string, open: boolean) {
+      if (this.animation) this.animation.cancel()
+      this.animation = this.el.animate(
+        { height: [start, end] },
+        { duration: DURATION, easing: EASING },
+      )
+      this.animation.onfinish = () => this.finish(open)
+    }
+
+    // Called externally when a sibling opens and this one must collapse.
+    collapse() {
+      if (!this.el.open || this.isClosing) return
+      if (reduceMotion()) {
+        this.el.open = false
+        return
+      }
+      this.el.style.overflow = 'hidden'
+      this.shrink()
+    }
+
+    finish(open: boolean) {
+      this.el.open = open
+      this.animation = null
+      this.isClosing = false
+      this.isExpanding = false
+      this.el.style.height = ''
+      this.el.style.overflow = ''
+    }
+  }
+
+  // Initial / restored open state is left entirely to Starlight's built-in
+  // SidebarPersister, which restores each group's state from sessionStorage
+  // *during parse, before first paint* — so there's no navigation flash. We
+  // only wire up the interactive accordion + open/close animation here.
+  function initSidebarAccordion() {
+    const groups = document.querySelectorAll<HTMLDetailsElement>(
+      '.sidebar-content .top-level > li > details',
+    )
+    const instances: AnimatedDetails[] = []
+    groups.forEach((el) => {
+      if (el.dataset.aaAccordion) return
+      el.dataset.aaAccordion = 'true'
+      const instance = new AnimatedDetails(el, (opened) => {
+        // Accordion: collapse every other top-level group.
+        instances.forEach((other) => {
+          if (other !== opened) other.collapse()
+        })
+      })
+      instances.push(instance)
+    })
+  }
+
+  // Runs on initial load, and again after client-side navigations if the
+  // ClientRouter is ever enabled. The dataset guard makes re-runs idempotent.
+  initSidebarAccordion()
+  document.addEventListener('astro:page-load', initSidebarAccordion)
+</script>

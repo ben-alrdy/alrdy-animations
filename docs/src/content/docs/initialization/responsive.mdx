@@ -1,0 +1,118 @@
+---
+title: Responsive variants
+description: Vary any aa-* attribute by breakpoint using the | shorthand or Tailwind-style -sm/-md/-lg/-xl suffixes. Both compile to exclusive width ranges — only one variant ever runs at once. Breakpoints are overridable via init({ breakpoints }).
+sidebar:
+  order: 2
+---
+
+Almost every `aa-*` attribute can take a **different value at different screen widths** — for example `aa-animate="blur"` with `aa-animate-md="fade-up"` blurs the element in on small screens and fades it up from `md` (768px) and above. There are two ways to write responsive values — a quick `|` shorthand and per-breakpoint suffixes — and both compile down to the same thing: a set of **exclusive width ranges**, of which exactly **one is ever active at a time**.
+
+```html
+<div aa-animate="blur" aa-animate-md="fade-up"> … </div>
+```
+
+## Breakpoints
+
+| Key | Applies from | Default width |
+| --- | --- | --- |
+| `base` | 0px | — |
+| `sm` | `sm` and up | `480px` |
+| `md` | `md` and up | `768px` |
+| `lg` | `lg` and up | `992px` |
+| `xl` | `xl` and up | `1280px` |
+
+These are the same breakpoints Tailwind users will recognise, and they're overridable — see [Overriding the breakpoints](#overriding-the-breakpoints) below.
+
+## The `|` shorthand
+
+A single pipe splits the value at the **`md`** boundary (768px by default): the left side applies at `md` and up, the right side applies below `md`.
+
+```html
+<!-- Desktop/tablet (≥768px): none. Mobile (<768px): draggable carousel. -->
+<div aa-slider="none|draggable"> … </div>
+```
+
+Read it as **`desktop | mobile`**. It's the fastest way to express "one thing above the fold width, another below" and it's all you need for most mobile/desktop splits. It can only ever split at `md`, though — for any other boundary, use the suffixes.
+
+## Breakpoint suffixes
+
+Append `-sm`, `-md`, `-lg`, or `-xl` to the attribute name to set a value at that breakpoint. Suffixes follow **Tailwind semantics: "at this breakpoint *and up*."** They're cumulative — a value set at a given breakpoint carries upward until a higher breakpoint overrides it.
+
+```html
+<div
+  aa-animate="fade-up"        <!-- base: applies from 0px up… -->
+  aa-animate-lg="fade-left"   <!-- …until lg (≥992px) takes over -->
+></div>
+```
+
+That resolves to:
+
+| Range | Width | Resolved value |
+| --- | --- | --- |
+| base / sm / md | `< 992px` | `fade-up` |
+| lg / xl | `≥ 992px` | `fade-left` |
+
+Because suffixes are always "and up," there is **no** suffix that means "at this breakpoint *only*" or "*and below*." To switch something **off above a certain width**, set the value at the breakpoint where it should stop and use `none` (below).
+
+## Opting out with `none`
+
+`none` is a first-class value: at any range where an attribute resolves to `none`, that feature simply **doesn't run** in that range.
+
+```html
+<!-- Slider active from 0–991px, off at 992px and up -->
+<div aa-slider="draggable" aa-slider-lg="none"> … </div>
+```
+
+| Range | Width | Slider |
+| --- | --- | --- |
+| base / sm / md | `0–991px` | **active** (`draggable`) |
+| lg / xl | `≥ 992px` | **off** (`none`) |
+
+This is the canonical "active on small screens only" pattern: set the feature's value as the base, then `none` it at the breakpoint where it should stop. To go the other way — off on small screens, on for large — invert it: `aa-slider="none" aa-slider-lg="draggable"`.
+
+:::note
+When a slider (or similar component) is `none` in a range, any in-slide `aa-animate` elements fall back to normal scroll triggers there, so your content still animates — just without the carousel.
+:::
+
+## Worked example — slider active 0–991px only
+
+Two equivalent ways to write "carousel below `lg`, nothing above it":
+
+```html
+<!-- Suffix form — the cutoff is lg (992px) -->
+<div aa-slider="draggable center" aa-slider-lg="none"> … </div>
+```
+
+The `|` shorthand **can't** express this one, because it only ever splits at `md` (768px), not `lg`. Use `|` when your boundary is 768px; use suffixes for any other breakpoint.
+
+## Only one variant runs at once
+
+The ranges are **exclusive** — every width belongs to exactly one range, with a sub-pixel gap so adjacent ranges never overlap. On resize, the library tears down the old range's setup and builds the new one (it's driven by `gsap.matchMedia()` under the hood), so you never get two variants of the same animation fighting each other.
+
+## Overriding the breakpoints
+
+Pass a `breakpoints` object to `init()` to move any of the four thresholds. It's merged into the defaults, so you only pass the ones you want to change:
+
+```js
+AlrdyAnimate.init({
+  breakpoints: {
+    md: 900,   // move the | split (and -md suffix) to 900px
+    lg: 1100,  // move the -lg suffix boundary to 1100px
+    // sm and xl keep their defaults (480 / 1280)
+  },
+})
+```
+
+| Breakpoint | Default | Controls |
+| --- | --- | --- |
+| `sm` | `480` | the `-sm` suffix boundary |
+| `md` | `768` | the `-md` suffix **and** the `\|` shorthand split |
+| `lg` | `992` | the `-lg` suffix boundary |
+| `xl` | `1280` | the `-xl` suffix boundary |
+
+Overriding `md` moves **both** the `-md` suffix and the `|` shorthand's split point, since the shorthand is defined as "split at `md`."
+
+## Related pages
+
+- [Init options](/initialization/init-options/) — the full `breakpoints` option and every other `InitOptions` field.
+- [Mobile optimization](/initialization/mobile-optimization/) — `optimizeMobile` drops the heaviest features below `md` without per-attribute responsive values.
