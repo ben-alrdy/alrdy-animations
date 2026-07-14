@@ -217,6 +217,13 @@ export function horizontalLoop(
 
   const refresh = (deep?: boolean): void => {
     const progress = tl.progress()
+    // Capture the live active slide before the playhead is reset below. During
+    // a throw curIndex is stale (still the pre-throw slide until the throw
+    // lands), so re-seating to it would snap the loop back to where the throw
+    // started — visible on mobile when the address bar toggles and fires a
+    // resize mid-throw. closestIndex() reads the current playhead here, before
+    // tl.progress(0) wipes it.
+    const activeIndex: number = indexIsDirty ? tl.closestIndex() : curIndex
     // Was the slider built/last-measured while hidden? If so, curIndex and
     // progress were seated from zero-width metrics (closestIndex lands on the
     // last slide). populateWidths() below refreshes measuredHidden.
@@ -236,8 +243,11 @@ export function horizontalLoop(
       lastIndex = 0
       if (onChange) onChange(items[0], 0)
     } else if (deep && tl.draggable) {
-      // A drag leaves the playhead between slides; re-seat onto the active slide.
-      tl.time(times[curIndex], true)
+      // A drag/throw leaves the playhead between slides; re-seat onto the slide
+      // nearest the live position (activeIndex), not the possibly-stale curIndex.
+      curIndex = activeIndex
+      indexIsDirty = false
+      tl.time(times[activeIndex], true)
     } else {
       // Non-draggable: preserve the running progress fraction so a resize that
       // lands mid-transition doesn't snap the slide.

@@ -175,10 +175,17 @@ export function finiteTrack(
       // Reset to the first slide and fire onChange so counter/active-class move.
       curIndex = 0
       lastIndex = -1
+      indexIsDirty = false
       applyX(xForIndex(0))
       fireChange(0)
     } else {
-      applyX(xForIndex(curIndex))
+      // A drag/throw leaves curIndex pointing at the pre-throw slide until the
+      // throw lands (indexIsDirty). Re-seating onto that stale index snaps the
+      // track back to where the throw *started* — visible on mobile when the
+      // address bar toggles and fires a resize during a vertical scroll that
+      // interrupted a throw. Seat onto the slide nearest the current position.
+      const seatIndex = indexIsDirty ? closestIndex(true) : curIndex
+      applyX(xForIndex(seatIndex))
     }
   }
   tl.refresh = refresh

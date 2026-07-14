@@ -24,6 +24,11 @@ What v8 doesn't have yet: **Pin** animations (rebuild planned in v8.x), form-sub
 
 ---
 
+## [8.1.3] — 2026-07-14
+
+### Fixed
+- **Slider no longer jumps back to the slide a throw started from when a resize fires mid-throw.** On mobile, a vertical scroll toggles the browser address bar, which fires a `resize` → the slider's debounced re-measure. During an inertia throw the active index is stale (it still points at the slide the throw *started* from until the throw lands), so the re-measure re-seated the track there — snapping it backwards, most visibly on a slow throw interrupted by a vertical scroll. Both the finite (`finite-track`) and infinite (`horizontal-loop`) engines now re-seat onto the slide nearest the *current* position instead.
+
 ## [8.1.2] — 2026-07-13
 
 ### Added
