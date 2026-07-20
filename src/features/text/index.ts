@@ -1,6 +1,6 @@
 import type { GsapTimeline } from '../../core/gsap-detect'
 import { bindFeature, type FeatureContext, type FeatureModule } from '../../core/registry'
-import { readAnimationConfig } from '../../core/parse'
+import { readAnimationConfig, resolveAnchor } from '../../core/parse'
 import { matchAnimateValue, type ResolvedPreset } from '../../core/presets'
 import type { Config } from '../../core/settings'
 import {
@@ -36,6 +36,13 @@ interface SetupResult {
 interface TextAnim {
   defaultSplit: SplitMode
   maskLines?: boolean
+  /**
+   * Opt this animation into the `aa-color` accent wave: when `aa-color` is
+   * present, each split unit additionally tweens `color` from the accent to
+   * the element's base colour, so the stagger trails the accent as a gradient
+   * wave. Fade + blur families only (simple path).
+   */
+  colorWave?: boolean
   /** Simple path: just animate the split parts from `buildFrom` to `to`. */
   buildFrom?: (intensity: number) => State
   to?: State
@@ -90,6 +97,7 @@ function fadeAnim(opacity: number, direction?: Direction): TextAnim {
   if (!direction) {
     return {
       defaultSplit: 'chars',
+      colorWave: true,
       buildFrom: () => ({ opacity }),
       to: { opacity: 1 },
     }
@@ -97,6 +105,7 @@ function fadeAnim(opacity: number, direction?: Direction): TextAnim {
   const { prop, sign } = DIR_AXIS[direction]
   return {
     defaultSplit: 'chars',
+    colorWave: true,
     buildFrom: (i) => ({ opacity, [prop]: 60 * sign * i }),
     to: { opacity: 1, [prop]: 0 },
   }
@@ -106,6 +115,7 @@ function blurAnim(direction?: Direction): TextAnim {
   if (!direction) {
     return {
       defaultSplit: 'chars',
+      colorWave: true,
       buildFrom: () => ({ opacity: 0, filter: 'blur(20px)' }),
       to: { opacity: 1, filter: 'blur(0px)' },
     }
@@ -114,6 +124,7 @@ function blurAnim(direction?: Direction): TextAnim {
   const offsetProp = prop === 'yPercent' ? 'y' : 'x'
   return {
     defaultSplit: 'chars',
+    colorWave: true,
     buildFrom: (i) => ({ opacity: 0, filter: 'blur(10px)', [offsetProp]: `${2 * sign * i}rem` }),
     to: { opacity: 1, filter: 'blur(0px)', [offsetProp]: 0 },
   }
@@ -122,6 +133,7 @@ function blurAnim(direction?: Direction): TextAnim {
 function scaleAnim(origin: '50% 50%' | '50% 100%' | '50% 0%'): TextAnim {
   return {
     defaultSplit: 'chars',
+    colorWave: true,
     buildFrom: () => ({ scaleY: 0, transformOrigin: origin }),
     to: { scaleY: 1 },
   }
@@ -332,7 +344,7 @@ function buildBarLines(
   return setups
 }
 
-const SUPPORTED = new Set([...Object.keys(TEXT_ANIMS), ...BAR_NAMES])
+const SUPPORTED = new Set([...Object.keys(TEXT_ANIMS), ...BAR_NAMES, 'text-wave'])
 
 function elementMatches(el: Element, presetMap: Map<Element, ResolvedPreset>): boolean {
   return matchAnimateValue(el, presetMap, (v) => SUPPORTED.has(v))
@@ -465,6 +477,157 @@ function setupBarReveal(
   }
 }
 
+// Resting opacity of an inactive `text-wave` unit: faint but readable (mirrors
+// Osmo's dim "inactive colour", but bg-agnostic — it's the base colour dimmed
+// by opacity rather than a hard-coded light/dark colour).
+const WAVE_INACTIVE_OPACITY = 0.2
+
+/**
+ * `text-wave` — the Osmo "gradient wave" engine. Fundamentally different from
+ * the timeline-based text animations: scroll position only sets *how many*
+ * units are active (`activeCount = round(progress × units)`), and each unit
+ * fires an independent **wall-clock** pulse the instant it crosses into the
+ * active set (forward only). That decoupling is what gives the three signature
+ * behaviours a scrubbed timeline can't:
+ *   - the accent runs ahead and the base colour "catches up" when you stop
+ *     (in-flight pulses finish; no new units activate),
+ *   - the accent band widens with scroll speed (band = units activated within
+ *     one pulse length ≈ velocity),
+ *   - scrolling back up shows no accent (deactivation fades straight to the
+ *     dim inactive state, never through the accent).
+ * Reduced-motion / optimizeMobile never reach here — core swaps `text-*` for a
+ * plain fade pass before this module loads.
+ */
+function setupColorWave(
+  ctx: FeatureContext,
+  element: Element,
+  config: Config,
+): (() => void) | undefined {
+  const gsap = ctx.gsap.gsap
+  const { duration, ease, scrollStart, scrollEnd, scrub } = readAnimationConfig(config, ctx.options)
+  const accent = resolveBarColor(config['aa-color'], element)
+  const base = window.getComputedStyle(element).color
+  const triggerEl = resolveAnchor(element, config['aa-anchor'])
+
+  const userSplit = parseSplit(config['aa-split'])
+  const splitMode: SplitMode = userSplit?.mode ?? 'chars'
+
+  const inactive: State = { opacity: WAVE_INACTIVE_OPACITY, color: base }
+  const activeSet = new Set<HTMLElement>()
+  const progress = { value: 0 }
+  let ready = false
+  let units: HTMLElement[] = []
+
+  const primeUnits = (): void => {
+    for (const u of units) u.style.willChange = 'color, opacity'
+    gsap.set(units, inactive)
+  }
+
+  // Hard-snap every unit to the state its index implies for the current
+  // progress — no pulse. Used on (re)split and on ScrollTrigger refresh so a
+  // page loaded already scrolled past the heading doesn't flash the accent.
+  const syncAll = (): void => {
+    const activeCount = Math.round(progress.value * units.length)
+    activeSet.clear()
+    units.forEach((u, i) => {
+      gsap.killTweensOf(u)
+      if (i < activeCount) {
+        gsap.set(u, { opacity: 1, color: base })
+        activeSet.add(u)
+      } else {
+        gsap.set(u, inactive)
+      }
+    })
+  }
+
+  // Forward crossing: fill opacity in over the entry, and pulse colour
+  // base → accent → hold → base over 1.2× the entry so the accent lingers.
+  const activate = (u: HTMLElement): void => {
+    gsap.killTweensOf(u)
+    const colorSpan = duration * 1.2
+    const tl = gsap.timeline()
+    tl.to(u, { opacity: 1, duration, ease }, 0)
+    tl.to(
+      u,
+      {
+        keyframes: [
+          { color: accent, duration: colorSpan * 0.25, ease: 'power2.out' },
+          { color: accent, duration: colorSpan * 0.25 },
+          { color: base, duration: colorSpan * 0.5, ease: 'power2.in' },
+        ],
+      },
+      0,
+    )
+  }
+
+  // Backward crossing: fade straight back to the dim inactive state — never
+  // through the accent (this is what makes upward scroll accent-free).
+  const deactivate = (u: HTMLElement): void => {
+    gsap.killTweensOf(u)
+    gsap.to(u, { ...inactive, duration: duration * 0.5, ease: 'none' })
+  }
+
+  const onUpdate = (): void => {
+    if (!ready) return
+    const activeCount = Math.round(progress.value * units.length)
+    units.forEach((u, i) => {
+      const isActive = i < activeCount
+      if (isActive && !activeSet.has(u)) {
+        activeSet.add(u)
+        activate(u)
+      } else if (!isActive && activeSet.has(u)) {
+        activeSet.delete(u)
+        deactivate(u)
+      }
+    })
+  }
+
+  const split = applySplit(element, splitMode, ctx.gsap, {
+    onResplit: (newSplit) => {
+      units = pickSimpleTargets(newSplit, splitMode)
+      primeUnits()
+      syncAll()
+    },
+  })
+  units = pickSimpleTargets(split, splitMode)
+  if (units.length === 0) {
+    split.revert()
+    return undefined
+  }
+  primeUnits()
+
+  // Osmo drives a proxy `{ value }` with ScrollTrigger scrub; onUpdate maps the
+  // proxy to activation crossings. Default scrub 0.1 (light smoothing) so fast
+  // scroll doesn't activate a whole block in one frame; `aa-scrub` overrides.
+  const driver = gsap.to(progress, {
+    value: 1,
+    ease: 'none',
+    onUpdate,
+    scrollTrigger: {
+      trigger: triggerEl,
+      start: scrollStart,
+      end: scrollEnd,
+      scrub: scrub === undefined ? 0.1 : scrub,
+      onRefresh: () => {
+        ready = false
+        syncAll()
+        requestAnimationFrame(() => {
+          ready = true
+        })
+      },
+    },
+  })
+
+  return () => {
+    driver.kill()
+    for (const u of units) {
+      gsap.killTweensOf(u)
+      u.style.willChange = ''
+    }
+    split.revert()
+  }
+}
+
 function setupOne(
   ctx: FeatureContext,
   element: Element,
@@ -472,6 +635,7 @@ function setupOne(
 ): (() => void) | undefined {
   const animate = config['aa-animate']
   if (!animate || !SUPPORTED.has(animate)) return undefined
+  if (animate === 'text-wave') return setupColorWave(ctx, element, config)
   const bar = parseBarName(animate)
   if (bar) return setupBarReveal(ctx, element, config, bar)
   const anim = TEXT_ANIMS[animate]
@@ -519,10 +683,14 @@ function setupOne(
     again,
     // Hint the compositor for the split units (chars/words/lines) only while
     // the tween runs; the orchestrator clears it on settle. Covers the full
-    // text-animation footprint (transform + opacity, plus filter for blur).
+    // text-animation footprint (transform + opacity, plus filter for blur,
+    // plus colour for the accent wave).
     // Replaces the old permanent will-change on the global .aa-char/.aa-word
     // CSS rule, which left a never-reclaimed layer per split unit.
-    willChange: 'transform, opacity, filter',
+    willChange:
+      anim.colorWave && config['aa-color']
+        ? 'transform, opacity, filter, color'
+        : 'transform, opacity, filter',
     buildAnimation: (vars) => {
       if (!split) return null
       let targets: GsapTarget
@@ -530,6 +698,7 @@ function setupOne(
       let toState: State
       let extraCleanup: (() => void) | undefined
       let lineGroups: HTMLElement[][] | undefined
+      let waveColors: { accent: string; base: string } | undefined
       if (anim.setup) {
         // anim.setup paths (oval, rotate) wrap lines in extra DOM and
         // return a cleanup that unwraps them. The orchestrator runs this
@@ -546,6 +715,20 @@ function setupOne(
         targets = simple
         fromState = anim.buildFrom(intensity)
         toState = anim.to
+        // Accent colour wave (fade/blur families + aa-color). Each unit rests
+        // dim in its *base* colour (opacity-only — no accent tint yet), fills
+        // in via the normal entry tween, and a separate colour tween pulses it
+        // base → accent → hold → base. The colour pulse runs longer than the
+        // entry and lingers on the accent (see the keyframe timings below), so
+        // the accent stays visible well past the fade-in and the per-unit
+        // stagger reads as a gradient wave (scrub-tied when `aa-scrub` is set).
+        if (anim.colorWave && config['aa-color']) {
+          waveColors = {
+            accent: resolveBarColor(config['aa-color'], element),
+            base: window.getComputedStyle(element).color,
+          }
+          fromState = { ...fromState, color: waveColors.base }
+        }
         if (lineGrouped) {
           const inner = splitMode === 'words' ? split.words : split.chars
           lineGroups = split.lines.map((line) => inner.filter((u) => line.contains(u)))
@@ -556,7 +739,30 @@ function setupOne(
       // the from-state visually, not whatever GSAP computes from a stale
       // layout. Redundant for unpaused load tweens but harmless.
       ctx.gsap.gsap.set(targets, fromState)
-      if (lineGroups) {
+      if (waveColors) {
+        // Two tweens, both staggered from position 0 so each unit's fade-in and
+        // colour pulse start together:
+        //   1. The normal entry (opacity/offset/blur) over `duration` — the
+        //      fade-in feel is preserved, colour untouched here.
+        //   2. A colour pulse over 1.2×`duration`: base → accent (reached at
+        //      25% via power2.out), held to 50%, then a lingering settle back to
+        //      base (power2.in). Running longer than the entry + holding the
+        //      accent is what keeps the wave colour visible past the fill.
+        const colorSpan = duration * 1.2
+        tl.fromTo(targets, fromState, { ...toState, duration, ease, stagger }, 0)
+        tl.to(
+          targets,
+          {
+            keyframes: [
+              { color: waveColors.accent, duration: colorSpan * 0.25, ease: 'power2.out' },
+              { color: waveColors.accent, duration: colorSpan * 0.25 },
+              { color: waveColors.base, duration: colorSpan * 0.5, ease: 'power2.in' },
+            ],
+            stagger,
+          },
+          0,
+        )
+      } else if (lineGroups) {
         for (let i = 0; i < lineGroups.length; i++) {
           const group = lineGroups[i]
           if (group.length === 0) continue

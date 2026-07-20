@@ -5,8 +5,9 @@ interface Props {
   centered?: boolean
   duration?: string
   stagger?: string
+  color?: string
 }
-const { animate, variant = 'default', centered = false, duration, stagger } = Astro.props
+const { animate, variant = 'default', centered = false, duration, stagger, color } = Astro.props
 const large = variant === 'large'
 const blockClass = ['td-block', large && 'td-block--large', centered && 'td-block--centered']
   .filter(Boolean)
@@ -14,22 +15,25 @@ const blockClass = ['td-block', large && 'td-block--large', centered && 'td-bloc
 ---
 
 <div class={blockClass}>
-  <div class="aa-demo-row-label"><code>{animate}</code></div>
+  <div class="aa-demo-row-label">
+    <code>{animate}</code>
+    {color && <code>{`aa-color="${color}"`}</code>}
+  </div>
 
-  <h1 class="td-h1" aa-animate={animate} aa-duration={duration} aa-stagger={stagger}>A short hero line</h1>
+  <h1 class="td-h1" aa-animate={animate} aa-color={color} aa-duration={duration} aa-stagger={stagger}>A short hero line</h1>
 
-  <h3 class="td-h3" aa-animate={animate} aa-duration={duration} aa-stagger={stagger}>
+  <h3 class="td-h3" aa-animate={animate} aa-color={color} aa-duration={duration} aa-stagger={stagger}>
     A two-line subhead that wraps onto a second line to show per-line behaviour.
   </h3>
 
   {!large && (
-    <p class="td-p" aa-animate={animate} aa-split="words">
+    <p class="td-p" aa-animate={animate} aa-color={color} aa-split="words">
       A three-line paragraph of body copy so we can see how the animation reads at a longer scale, with several lines of text wrapping naturally across the page width.
     </p>
   )}
 
   <div class="td-scrub-label">scrubbed (<code>aa-scrub="1"</code>)</div>
-  <h1 class="td-h1" aa-animate={animate} aa-scrub="1" aa-duration={duration} aa-stagger={stagger}>
+  <h1 class="td-h1" aa-animate={animate} aa-color={color} aa-scrub="1" aa-duration={duration} aa-stagger={stagger}>
     Tied to scroll.<br />
     Watch the easing.<br />
     Feel each beat.
@@ -37,6 +41,11 @@ const blockClass = ['td-block', large && 'td-block--large', centered && 'td-bloc
 </div>
 
 <style>
+  .aa-demo-row-label {
+    display: inline-flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
   .td-block {
     display: flex;
     flex-direction: column;

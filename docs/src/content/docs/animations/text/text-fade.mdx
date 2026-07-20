@@ -8,6 +8,8 @@ import TextDemo from '../../../../components/TextDemo.astro'
 
 The fade family splits the element into characters and animates the opacity of each one. `text-fade` is plain. `text-fade-up`, `-down`, `-left`, `-right` add a directional offset. `text-fade-30` / `text-fade-10` start at 30% / 10% opacity instead of 0 — pair them with `aa-scrub` to dim a paragraph as it enters view.
 
+Add `aa-color` to any `text-fade*` element for an **accent colour wave**: each character fills in from its dim resting state, takes on the accent colour, holds it, then settles to the base text colour — so the accent lingers and the per-character stagger reads as a gradient wave. See [Accent colour wave](#accent-colour-wave) below.
+
 ## Variants
 
 | Variant            | Starts at        | Offset                                |
@@ -32,6 +34,7 @@ The fade family splits the element into characters and animates the opacity of e
 | `aa-intensity` | `1`        | Multiplier on offset variants. Falls back to `init({ intensity })` (default `1`). |
 | `aa-ease`     | (init)      | Any GSAP ease. Falls back to `init({ ease })` (default `power4.out`). |
 | `aa-scrub`    | (off)       | `true` or seconds — bind progress to scroll.       |
+| `aa-color`    | (off)       | Accent colour each character pulses through (base → accent → hold → base) as it fades in. Any CSS colour (`#F84131`, `rgb(...)`, named) or a `--custom-prop` name. Enables the [accent colour wave](#accent-colour-wave). |
 
 ## Required GSAP plugins
 
@@ -48,5 +51,23 @@ The fade family splits the element into characters and animates the opacity of e
     <TextDemo animate="text-fade-right" />
     <TextDemo animate="text-fade-30" />
     <TextDemo animate="text-fade-10" />
+  </div>
+</Demo>
+
+## Accent colour wave
+
+Adding `aa-color` to a `text-fade*` element gives each character a colour pulse on top of the usual opacity fade. Each character rests dim in its **base** colour (opacity only — no tint yet), then as it fills in it takes on the accent colour, **holds** it briefly, and finally settles back to the base. The pulse runs longer than the fade-in and lingers on the accent, so — with the per-character stagger — the accent trails the reveal front as a gradient wave: leading characters have already settled to the base while trailing ones are still glowing with the accent.
+
+- **Base colour is automatic** — it's the element's own computed CSS `color`, so the wave always resolves to whatever the text normally is.
+- **One-shot by default**, tied to scroll when you add `aa-scrub` — the scrubbed rows below track the wave to scroll position in both directions.
+- **`text-fade-30` / `text-fade-10`** keep the characters partly visible in the base colour from the start, then brighten to the accent as they fill to full opacity before settling back — the softest, most gradient-like look.
+
+The same attribute works on the [blur family](/animations/text/text-blur/) too.
+
+<Demo caption='text-fade* accent wave'>
+  <div data-demo-stage>
+    <TextDemo animate="text-fade" color="#F84131" />
+    <TextDemo animate="text-fade-30" color="#F84131" />
+    <TextDemo animate="text-fade-up" color="#5B8DEF" />
   </div>
 </Demo>

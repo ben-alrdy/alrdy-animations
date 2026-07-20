@@ -44,9 +44,11 @@ declare namespace JSX {
      * `text-blur-up` | `text-blur-down` | `text-blur-left` | `text-blur-right` |
      * `text-scale` | `text-scale-up` | `text-scale-down` | `text-slide-up` |
      * `text-slide-down` | `text-tilt-up` | `text-tilt-down` | `text-oval-up` |
-     * `text-oval-down` | `text-rotate` | `text-block-<dir>` | `text-marker-<dir>`
+     * `text-oval-down` | `text-rotate` | `text-wave` | `text-block-<dir>` |
+     * `text-marker-<dir>`
      * (`<dir>` = `up`|`down`|`left`|`right`; the direction suffix is required).
-     * Pair with `aa-split` to control granularity.
+     * Pair with `aa-split` to control granularity. `text-wave` is the
+     * scroll-driven accent wave (needs `aa-color`) — see the `aa-color` docs.
      *
      * **Reveal presets** (feature: `reveal`): `reveal-up` | `reveal-down` |
      * `reveal-left` | `reveal-right` | `reveal-center` | `reveal-oval-up` |
@@ -605,9 +607,24 @@ declare namespace JSX {
      */
     'aa-hover-trigger'?: string | boolean
     /**
-     * Color to fade the element to on hover. Any CSS color (`#ff0033`,
-     * `rgb(...)`, named color). Used on its own or with `aa-hover` for combined
-     * direction-aware bg + colorize.
+     * Accent / target color. Any CSS color (`#ff0033`, `rgb(...)`, named) or a
+     * `--custom-prop` name (resolved against the element). Read by three
+     * features:
+     *
+     * - **hover** — color the element fades to on hover; on its own or with
+     *   `aa-hover` for combined direction-aware bg + colorize.
+     * - **text `text-fade*` / `text-blur*` / `text-scale*`** — enables an accent
+     *   color *pulse*: each character rests in its base color, then as it
+     *   animates in it pulses through this accent (base → accent → brief hold →
+     *   base). The pulse lingers past the entry, so the per-character stagger
+     *   trails the accent as a gradient wave. Add `aa-scrub` to tie it to scroll
+     *   position; `text-fade-30` / `text-fade-10` give the dim-to-bright look.
+     * - **text `text-wave`** — *required* here: the accent the scroll-driven
+     *   wave sweeps through. `text-wave` is a distinct engine (scroll sets how
+     *   many chars are active; each activation fires a wall-clock accent pulse
+     *   forward only) so the accent band widens with scroll speed, the base
+     *   color catches up when you stop, and scrolling back up shows no accent.
+     * - **text `text-block-*` / `text-marker-*`** — sets the reveal bar color.
      *
      * **Icon-hover caveat:** for the `icon-<dir>` head, `aa-color` sets `color`
      * on the clone — which only paints SVG `<path>` elements that use

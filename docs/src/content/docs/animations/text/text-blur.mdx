@@ -8,6 +8,8 @@ import TextDemo from '../../../../components/TextDemo.astro'
 
 The blur family splits the element into characters and fades each one in while a CSS blur filter dissipates. The plain variant has no positional offset; directional variants add a soft `2rem × intensity` drift on the named axis so characters drift into place behind the blur.
 
+Add `aa-color` for an **accent colour wave**: as each character fades in it takes on the accent colour, holds it, then settles to the element's base text colour — the accent lingers and the per-character stagger reads as a gradient wave. See [Accent colour wave](#accent-colour-wave) below.
+
 ## Variants
 
 | Variant            | Blur amount | Offset                                           |
@@ -30,6 +32,7 @@ The blur family splits the element into characters and fades each one in while a
 | `aa-intensity` | `1`        | Multiplier on the `2rem` translate offset.        |
 | `aa-ease`     | (init)      | Any GSAP ease. Falls back to `init({ ease })` (default `power4.out`). |
 | `aa-scrub`    | (off)       | `true` or seconds — bind progress to scroll.       |
+| `aa-color`    | (off)       | Accent colour each character pulses through (accent → hold → base) as it fades in. Any CSS colour or a `--custom-prop` name. Enables the [accent colour wave](#accent-colour-wave). |
 
 ## Required GSAP plugins
 
@@ -44,5 +47,16 @@ The blur family splits the element into characters and fades each one in while a
     <TextDemo animate="text-blur-down" />
     <TextDemo animate="text-blur-left" />
     <TextDemo animate="text-blur-right" />
+  </div>
+</Demo>
+
+## Accent colour wave
+
+Adding `aa-color` gives each character a colour pulse on top of the usual blur fade: as it fades in it takes on the accent colour, holds it, then settles to the base. The pulse runs longer than the fade-in and lingers on the accent, so the per-character stagger trails the accent as a gradient wave — trailing characters still glowing while leading ones have resolved to the base. The base colour is automatic (the element's own computed CSS `color`), and adding `aa-scrub` ties the wave to scroll position. The same attribute works on the [fade family](/animations/text/text-fade/).
+
+<Demo caption='text-blur* accent wave'>
+  <div data-demo-stage>
+    <TextDemo animate="text-blur" color="#F84131" />
+    <TextDemo animate="text-blur-up" color="#5B8DEF" />
   </div>
 </Demo>

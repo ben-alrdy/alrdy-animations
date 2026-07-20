@@ -27,6 +27,7 @@ The scale family splits the element into characters and tweens `scaleY` from `0`
 | `aa-delay`    | `0`         | Seconds.                                                               |
 | `aa-ease`     | (init)      | Any GSAP ease. Falls back to `init({ ease })` (default `power4.out`).  |
 | `aa-scrub`    | (off)       | `true` or seconds — bind progress to scroll.                           |
+| `aa-color`    | (off)       | Accent colour each character pulses through (base → accent → hold → base) as it scales in. Any CSS colour or a `--custom-prop` name. Same accent wave as the [fade family](/animations/text/text-fade/#accent-colour-wave). |
 
 ## Required GSAP plugins
 
@@ -51,5 +52,15 @@ Scale animations read well when they're snappy — these demos shorten the durat
 <Demo caption='aa-animate="text-scale-down" aa-duration="0.4" aa-stagger="0.015"'>
   <div data-demo-stage>
     <TextDemo animate="text-scale-down" duration="0.4" stagger="0.015" />
+  </div>
+</Demo>
+
+## Accent colour wave
+
+Add `aa-color` to give each character an accent-colour pulse as it scales in — the same wave described on the [fade page](/animations/text/text-fade/#accent-colour-wave). Each character rests in its base colour, takes on the accent as it grows, holds it briefly, then settles back.
+
+<Demo caption='text-scale accent wave'>
+  <div data-demo-stage>
+    <TextDemo animate="text-scale" color="#F84131" duration="0.4" stagger="0.015 center" />
   </div>
 </Demo>

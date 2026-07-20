@@ -1,0 +1,46 @@
+---
+title: text-wave
+description: Scroll-driven gradient wave — a colour wave sweeps through the text as you scroll, each character lighting up in an accent colour before settling to the base. Velocity-aware, direction-aware.
+---
+
+import Demo from '../../../../components/Demo.astro'
+import TextDemo from '../../../../components/TextDemo.astro'
+
+`text-wave` is a scroll-driven accent wave (inspired by Osmo's gradient wave text). As you scroll, characters activate in reading order: each one lights up in the accent colour, holds it briefly, then settles to the base text colour. The result is a colour wave that sweeps through the heading.
+
+It is a **different engine** from the other text animations. Scroll position only controls *how many* characters are active — each character's colour pulse then runs on its own clock, independent of scroll. That decoupling gives three behaviours a scrubbed timeline can't:
+
+- **The accent runs ahead and the base colour catches up when you stop.** Stop scrolling and the in-flight pulses finish; everything settles to the base.
+- **The accent band widens with scroll speed.** Scroll slowly and only a few characters glow at once; scroll fast and a long band lights up (the band is however many characters activated within one pulse length).
+- **Scrolling back up shows no accent.** Reversing fades characters straight back to their dim resting state — the accent only ever appears going forward.
+
+Set the accent with **`aa-color`** — it's required for the wave to be visible. The base colour is automatic (the element's own computed CSS `color`). Characters rest at a faint opacity and brighten to full as they activate, so the text stays readable ahead of the wave.
+
+If you want the simpler, non-scroll-decoupled version — a one-shot accent pulse that plays as the text fades in (and reverses through the accent on scrub) — use [`text-fade` / `text-blur` / `text-scale` with `aa-color`](/animations/text/text-fade/#accent-colour-wave) instead.
+
+## Attributes
+
+| Attribute     | Default     | Notes                                                                 |
+| ------------- | ----------- | --------------------------------------------------------------------- |
+| `aa-animate`  | (required)  | `text-wave`.                                                          |
+| `aa-color`    | (required)  | Accent colour the wave sweeps through. Any CSS colour (`#F84131`, `rgb(...)`, named) or a `--custom-prop` name. Without it there's no visible wave. |
+| `aa-split`    | `chars`     | Override split mode (`chars`, `words`, `lines`). Chars reads best.     |
+| `aa-duration` | (init)      | Length of each character's colour pulse (wall-clock). Falls back to `init({ duration })` (default `0.6`). |
+| `aa-scrub`    | `0.1`       | Smoothing of the scroll → activation link. Lower is snappier, higher lags more. |
+| `aa-scroll-start` / `aa-scroll-end` | (init) | Scroll range over which the characters activate. |
+| `aa-anchor`   | (self)      | Selector for the element whose scroll position drives the wave.        |
+
+## Required GSAP plugins
+
+`gsap`, `ScrollTrigger`, `SplitText`.
+
+## Live demo
+
+Scroll slowly, then fast — notice how the accent band width tracks your scroll speed, and how the base colour catches up whenever you pause. Scroll back up: no accent.
+
+<Demo caption='text-wave'>
+  <div data-demo-stage>
+    <TextDemo animate="text-wave" color="#F84131" />
+    <TextDemo animate="text-wave" color="#5B8DEF" />
+  </div>
+</Demo>
