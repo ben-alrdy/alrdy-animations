@@ -21,5 +21,12 @@ export default defineConfig({
     timeout: 120_000,
     stdout: 'pipe',
     stderr: 'pipe',
+    // Astro 7's `astro dev` auto-detects AI-agent environments (via
+    // `am-i-vibing`) and silently daemonizes itself in the background —
+    // the wrapping process then exits immediately, which Playwright reads
+    // as "the webServer process exited early". Any truthy value here
+    // disables that auto-detection (see astro/dist/cli/dev/index.js:
+    // `agentDetected = !process.env.ASTRO_DEV_BACKGROUND && isRunByAgent()`).
+    env: { ASTRO_DEV_BACKGROUND: '1' },
   },
 })
