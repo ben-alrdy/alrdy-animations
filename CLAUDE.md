@@ -16,8 +16,8 @@ If a future major rewrite (v9) needs the same alpha-while-stable-holds pattern, 
 ## Stack and constraints
 
 - **TypeScript** strict, with `verbatimModuleSyntax`, `noUnusedLocals`, `exactOptionalPropertyTypes`. See `tsconfig.json`.
-- **Vite 7** for the lib build. Do not bump to Vite 8 until upstream publishes a working `darwin-universal` Rolldown binary — the install fails as of 2026-04.
-- **Astro 6 + Starlight 0.38** for the docs site at `docs/`. Requires Node ≥ 22.12.
+- **Vite 7** for the lib build. Do not bump to Vite 8 until upstream publishes a working `darwin-universal` Rolldown binary — the install fails as of 2026-04. (As of 2026-08 the binary installs cleanly on darwin-arm64 in isolation — worth re-checking against the actual lib build before lifting this pin.)
+- **Astro 7 + Starlight 0.41** for the docs site at `docs/`. Requires Node ≥ 22.12. Astro 7 hard-depends on `vite: ^8.0.13` (Rolldown-powered) — never pin/override `vite` below 8.x in `docs/package.json`. Doing so lets npm silently install classic Vite 7, under which Astro's `rolldownOptions`-based build config no-ops and the build fails with `rollupOptions.input should not be an html file when building for SSR` (Vite falls back to its `index.html` default for the internal SSR/prerender environment).
 - **Node 22.22.2 (LTS jod)** is the project's pinned default via `nvm alias default 22.22.2`.
 - **GSAP is a peer dependency, never bundled.** Vite config marks `gsap` and `gsap/*` plugins as external. Users provide it via `<script>` tag (Webflow) or `npm install gsap` (Next.js).
 - **Webflow's GSAP acquisition made all Club plugins free** (SplitText, Draggable, Inertia, Flip, MorphSVG). Use them freely in feature modules.
